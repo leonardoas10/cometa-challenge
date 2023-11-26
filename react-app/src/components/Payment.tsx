@@ -6,29 +6,34 @@ import {
     FormControl,
     InputLabel,
     TextField,
-    Box,
+    Stack,
     SelectChangeEvent,
+    Switch,
 } from '@mui/material';
+import axios from 'axios';
+
 import { IOrder } from '../interfaces/orders';
+import { IAccount } from '../interfaces/account';
 
 export const Payment: React.FC = () => {
     const [selectedFriend, setSelectedFriend] = useState<string>('');
     const [amountToPay, setAmountToPay] = useState<string>('');
+    const [selectedOrder, setSelectedOrder] = useState<IOrder | null>(null);
+    const [accountData, setAccountData] = useState<IAccount | null>(null);
     const [orders, setOrders] = useState<Array<IOrder>>([]);
+    const [selectedAccountOrder, setSelectedAccountOrder] = useState<number>(0);
+    const [payPerCustomer, setPayPerCustomer] = useState<boolean>(true);
+    const [totalAmount, setTotalAmount] = useState<string>('');
 
     useEffect(() => {
         const fetchOrders = async () => {
             try {
-                const response = await fetch(
+                const response = await axios.get(
                     'http://localhost:8080/api/orders'
-                ); // Reemplaza 'your-api-port' con el puerto de tu API
-                if (!response.ok) {
-                    throw new Error('Error al obtener las órdenes');
-                }
-
-                const data = await response.json();
-                setOrders(data.orders); // Ajusta según la estructura de tu respuesta de la API
-                console.log('orders => ', data.orders);
+                );
+                // Axios automatically throws an error for non-2xx responses
+                const data = response.data;
+                setOrders(data.orders);
             } catch (error) {
                 console.error('Error en la solicitud:', error);
             }
@@ -37,25 +42,73 @@ export const Payment: React.FC = () => {
         fetchOrders();
     }, []);
 
-    const handleFriendChange = (
-        event: SelectChangeEvent<string> // Ajusta el tipo del evento
-    ) => {
-        setSelectedFriend(event.target.value);
+    useEffect(() => {
+        // Update the "Amount to Pay" field when the selected customer changes
+        if (accountData && accountData.orders[selectedAccountOrder]) {
+            const selectedCustomerAmount = accountData.orders[
+                selectedAccountOrder
+            ].reduce((total, order) => total + order.price, 0);
+            setAmountToPay(String(selectedCustomerAmount));
+        }
+    }, [selectedAccountOrder, accountData]);
+
+    const handleAccountOrderChange = (event: SelectChangeEvent<number>) => {
+        setSelectedAccountOrder(Number(event.target.value));
     };
 
-    const handleAmountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setAmountToPay(event.target.value);
+    const handleFriendChange = (event: SelectChangeEvent<string>) => {
+        const orderId = event.target.value;
+        setSelectedFriend(orderId);
+        const order = orders.find((o) => o.id === orderId);
+        setSelectedOrder(order || null);
     };
 
-    const handlePayClick = () => {
-        // Agrega lógica para manejar el pago aquí
-        console.log(`Friend: ${selectedFriend}, Amount: ${amountToPay}`);
+    const handlePaymentTypeChange = () => {
+        setPayPerCustomer((prev) => !prev);
+    };
+
+    const handleGetAccountClick = async () => {
+        if (selectedOrder) {
+            try {
+                const response = await axios.get(
+                    `http://localhost:8080/api/account/${selectedOrder.id}`
+                );
+                const account = response.data;
+                setAccountData(account.account);
+
+                const selectedCustomerAmount = account.account.orders[
+                    selectedAccountOrder
+                ].reduce((total: any, order: any) => total + order.price, 0);
+                setAmountToPay(String(selectedCustomerAmount));
+                setTotalAmount(account.account.total);
+            } catch (error) {
+                console.error('Error en la solicitud:', error);
+            }
+        }
+    };
+
+    const handlePayClick = async () => {
+        if (selectedOrder && accountData) {
+            try {
+                const response = await axios.put(
+                    'http://127.0.0.1:8080/api/pay',
+                    {
+                        accountId: accountData.id,
+                        payAmount: payPerCustomer ? amountToPay : totalAmount,
+                    }
+                );
+                console.log('Payment successful:', response.data);
+                // Add any further logic or UI updates after successful payment
+            } catch (error) {
+                console.error('Error in payment:', error);
+            }
+        }
     };
 
     return (
-        <Box sx={{ mt: 5 }}>
+        <Stack sx={{ mt: 5 }} spacing={5}>
             <FormControl fullWidth>
-                <InputLabel id="friend-label">Select Friend</InputLabel>
+                <InputLabel id="friend-label">Orders</InputLabel>
                 <Select
                     labelId="friend-label"
                     id="friend-select"
@@ -63,28 +116,71 @@ export const Payment: React.FC = () => {
                     label="Select Friend"
                     onChange={handleFriendChange}
                 >
-                    <MenuItem value="friend1">Friend 1</MenuItem>
-                    <MenuItem value="friend2">Friend 2</MenuItem>
-                    <MenuItem value="friend3">Friend 3</MenuItem>
+                    {orders.map((order) => (
+                        <MenuItem key={order.id} value={order.id}>
+                            {order.id}
+                        </MenuItem>
+                    ))}
                 </Select>
             </FormControl>
+            {selectedOrder && (
+                <Button
+                    variant="contained"
+                    color="secondary"
+                    onClick={handleGetAccountClick}
+                >
+                    Get Account
+                </Button>
+            )}
+            <h1>
+                Pay{' '}
+                <Switch
+                    checked={payPerCustomer}
+                    onChange={handlePaymentTypeChange}
+                    inputProps={{ 'aria-label': 'controlled' }}
+                />
+                {payPerCustomer ? 'per customer' : 'all in one account'}
+            </h1>
 
-            <TextField
-                fullWidth
-                label="Amount to Pay"
-                variant="outlined"
-                type="number"
-                value={amountToPay}
-                onChange={handleAmountChange}
-            />
+            {payPerCustomer && selectedOrder && accountData && (
+                <FormControl fullWidth>
+                    <InputLabel id="account-order-label">
+                        Select Order
+                    </InputLabel>
+                    <Select
+                        labelId="account-order-label"
+                        id="account-order-select"
+                        value={selectedAccountOrder}
+                        label="Select Order"
+                        onChange={handleAccountOrderChange}
+                    >
+                        {accountData.orders.map((order, index) => (
+                            <MenuItem key={index} value={index}>
+                                {`Customer ${index + 1}`}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+            )}
+            {selectedOrder && accountData && (
+                <TextField
+                    fullWidth
+                    label="Total Amount to Pay"
+                    variant="outlined"
+                    type="number"
+                    value={payPerCustomer ? amountToPay : totalAmount}
+                />
+            )}
 
-            <Button
-                variant="contained"
-                color="primary"
-                onClick={handlePayClick}
-            >
-                Pay
-            </Button>
-        </Box>
+            {selectedOrder && accountData && (
+                <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handlePayClick}
+                >
+                    Pay
+                </Button>
+            )}
+        </Stack>
     );
 };
