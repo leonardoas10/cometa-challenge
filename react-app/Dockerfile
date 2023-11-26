@@ -1,11 +1,7 @@
 # Use an official Node runtime as a parent image
 FROM node:14-alpine
-
-# Set the working directory in the container
-WORKDIR /usr/src/app
-
-# Copy package.json and package-lock.json to the working directory
-COPY package*.json ./
+WORKDIR /app
+COPY package.json /app
 
 # Install app dependencies
 RUN npm install

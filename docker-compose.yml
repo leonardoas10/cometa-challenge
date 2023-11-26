@@ -1,8 +1,6 @@
-# docker-compose.yml
-
 version: '3'
 services:
-    app:
+    node-app:
         container_name: node-app
         build:
             context: ./node-app
@@ -15,6 +13,18 @@ services:
         volumes:
             - '${PWD}/node-app:/app'
             - '/app/node_modules'
+        networks:
+            - app-network
+    react-app:
+        container_name: react-app
+        build:
+            context: ./react-app
+            dockerfile: Dockerfile
+        volumes:
+            - '${PWD}/react-app:/app'
+            - '/app/node_modules'
+        ports:
+            - '3000:3000'
         networks:
             - app-network
 networks:
