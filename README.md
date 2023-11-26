@@ -19,7 +19,8 @@ As bonus i added another endpoint, to see previous orders
 2. Go to the root of the project and run => `docker-compose build`
 3. Go to the root of the project and run => `docker-compose up -d`
 4. In root you gonna find the postman collection for test the endpoints
-5. Start reading code, interpreting functionalities and programming :smile:
+5. For testing the app with react is as exposed in port 3000 [ Web App ](https://localhost:3000) :fire:, you only need to create order with postman and then refresh app, you gonna see the orders in dropdown.
+6. Start reading code, interpreting functionalities and programming :smile:
 
 ## How to test it? - Using Jest 🧪
 
