@@ -5,3 +5,4 @@ dist
 Dockerfile
 Dockerfile.prod
 .env
+tests
