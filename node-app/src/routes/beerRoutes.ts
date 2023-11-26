@@ -6,7 +6,7 @@ const router = express.Router();
 router.get('/beers', beerController.getBeers);
 router.get('/orders', beerController.getOrders);
 router.post('/order', beerController.generateOrder);
-router.get('/account/:id', beerController.getAccount);
-router.post('/pay', beerController.payAccount);
+router.get('/account/:orderId', beerController.getAccount);
+router.put('/pay', beerController.payAccount);
 
 export default router;

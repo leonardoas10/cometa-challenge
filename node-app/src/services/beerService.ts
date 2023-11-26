@@ -1,5 +1,6 @@
 import { IOrder, IReqGenerateOrder } from '../interfaces/order';
 import { IAccount } from '../interfaces/account';
+import { IReqPayAccount } from '../interfaces/pay';
 import { v4 as uuidv4 } from 'uuid';
 
 // In Memory DB of orders
@@ -14,7 +15,6 @@ const beerService = {
         { id: 3, name: 'Beer C', price: 20 },
     ],
 
-    // Function to get the list of available beers
     getListOfBeers: () => {
         return beerService.availableBeers;
     },
@@ -26,7 +26,6 @@ const beerService = {
     generateOrder: async (orderDetail: IReqGenerateOrder): Promise<IOrder> => {
         const order: IOrder = {
             id: uuidv4(),
-            clientName: orderDetail.clientName,
             orders: orderDetail.orders,
             timestamp: new Date(),
         };
@@ -39,9 +38,9 @@ const beerService = {
         const foundOrder = orders.find((order) => order.id === id);
         if (foundOrder) {
             const { orders, total } = await getDetailOrders(foundOrder.orders);
-            account.clientName = foundOrder.clientName;
             account.timestamp = new Date();
-            account.id = foundOrder.id;
+            account.id = uuidv4();
+            account.orderId = foundOrder.id;
             account.orders = orders;
             account.total = total;
             account.restForPay = total;
@@ -50,16 +49,49 @@ const beerService = {
         }
         return undefined;
     },
+
+    payAccount: async (
+        payDetails: IReqPayAccount
+    ): Promise<IAccount | undefined> => {
+        const foundAccount = accounts.find(
+            (account) => account.id === payDetails.accountId
+        );
+        if (foundAccount) {
+            if (foundAccount.restForPay > 0) {
+                if (payDetails.payAmount > foundAccount.restForPay) {
+                    const refundAmount =
+                        payDetails.payAmount - foundAccount.restForPay;
+                    foundAccount.restForPay = 0;
+                    return { ...foundAccount, refundAmount };
+                } else {
+                    foundAccount.restForPay -= payDetails.payAmount;
+                    return foundAccount;
+                }
+            } else {
+                // Caso 3: restForPay is 0, cannot be pay again.
+                return undefined;
+            }
+        }
+        return undefined;
+    },
 };
 
-const getDetailOrders = async (orders: number[]) => {
-    // Assuming availableBeers is an array of available beers
-    const selectedBeers = beerService.availableBeers.filter((beer) =>
-        orders.includes(beer.id)
-    );
+const getDetailOrders = async (
+    orderIds: number[][]
+): Promise<{ orders: Array<Array<any>>; total: number }> => {
+    const selectedBeers: Array<Array<any>> = [];
 
-    // Calculate total
-    const total = selectedBeers.reduce((acc, beer) => acc + beer.price, 0);
+    for (const orderIdGroup of orderIds) {
+        const beersInGroup = orderIdGroup.map((orderId) =>
+            beerService.availableBeers.find((beer) => beer.id === orderId)
+        );
+
+        selectedBeers.push(beersInGroup.filter(Boolean));
+    }
+
+    const total = selectedBeers
+        .flat() // Flatten the array of arrays into a single array
+        .reduce((acc, beer) => acc + beer.price, 0);
 
     return { orders: selectedBeers, total };
 };

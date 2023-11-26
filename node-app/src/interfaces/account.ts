@@ -1,11 +1,14 @@
 export interface IAccount {
     id: string;
-    clientName: string;
-    orders: Array<{
-        name: string;
-        price: number;
-    }>;
+    orderId: string;
+    orders: Array<
+        Array<{
+            name: string;
+            price: number;
+        }>
+    >;
     total: number;
     restForPay: number;
+    refundAmount?: number;
     timestamp: Date;
 }
