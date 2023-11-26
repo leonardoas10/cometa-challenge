@@ -1,0 +1,22 @@
+# docker-compose.yml
+
+version: '3'
+services:
+    app:
+        container_name: node-app
+        build:
+            context: ./node-app
+            dockerfile: Dockerfile
+        ports:
+            - '8080:8080'
+        env_file: .env
+        environment:
+            - NODE_APP_PORT=$NODE_APP_PORT
+        volumes:
+            - '${PWD}/node-app:/app'
+            - '/app/node_modules'
+        networks:
+            - app-network
+networks:
+    app-network:
+        driver: bridge
