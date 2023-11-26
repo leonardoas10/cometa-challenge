@@ -16,11 +16,11 @@ const beerController = {
         });
     },
     getOrders: (req: Request, res: Response) => {
-        const beers = beerService.getOrders();
+        const orders = beerService.getOrders();
         res.status(200).json({
             success: true,
             message: 'Previous orders',
-            beers,
+            orders,
         });
     },
     getAccount: async (req: Request, res: Response) => {
